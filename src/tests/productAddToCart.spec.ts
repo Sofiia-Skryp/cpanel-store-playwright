@@ -3,37 +3,79 @@ import { HomePage } from '@/pages/HomePage';
 import { ProductPage } from '@/pages/ProductPage';
 import { CartPage } from '@/pages/CartPage';
 import { CheckoutPage } from '@/pages/CheckoutPage';
-import { TEST_IP } from '@/fixtures/testData';
+import { PRODUCT_CLOUD_LINUX } from '@/data/testData';
+import { PRODUCT_CPANEL_PREMIER } from '@/data/testData';
+import { getRandomIP } from '@/fixtures/dataFactory';
 
-test.describe('cPanel Store Cart Flow', () => {
-    test('Add product & addon to cart, verify checkout', async ({ page }) => {
-        const homePage = new HomePage(page);
-        const productPage = new ProductPage(page);
-        const cartPage = new CartPage(page);
-        const checkoutPage = new CheckoutPage(page);
+let homePage: HomePage;
+let productPage: ProductPage;
+let cartPage: CartPage;
+let checkoutPage: CheckoutPage;
 
-        await homePage.goto();
+test.beforeEach(async ({ page }) => {
+    homePage = new HomePage(page);
+    productPage = new ProductPage(page);
+    cartPage = new CartPage(page);
+    checkoutPage = new CheckoutPage(page);
+});
 
-        const productName = 'cPanel Premier';
-        await homePage.selectProductByName(productName);
 
-        await productPage.setIpAddress(TEST_IP);
 
-        await productPage.selectFirstAddon();
+test('Add product & addon to cart, verify checkout', async ({ page }) => {
 
-        await productPage.continue();
+    const TIMEOUT = 20000;
+    const testIP = getRandomIP();
 
-        const addonName = 'CloudLinux OS';
-        await cartPage.verifyProductAndAddonPresent(productName, addonName);
+    await homePage.goto();
 
-        await cartPage.proceedToCheckout();
+    const productRecurringPriceStr = await homePage.getProductRecurringPriceByName(PRODUCT_CPANEL_PREMIER);
+    const productRecurringPrice = parseFloat(productRecurringPriceStr.replace(/[^\d.]/g, ''));
 
-        const totalPrice = await cartPage.getTotalPrice();
-        await checkoutPage.verifyCheckoutInfo({
-            product: productName,
-            ip: TEST_IP,
-            price: totalPrice,
-        });
-        await checkoutPage.verifySections();
-    });
+    await homePage.selectProductByName(PRODUCT_CPANEL_PREMIER);
+    await productPage.setIpAddress(testIP, TIMEOUT);
+
+    const priceDueTodayBeforeAddonStr = await productPage.getTotalDueToday(TIMEOUT);
+    const priceDueTodayBeforeAddon = parseFloat(priceDueTodayBeforeAddonStr.replace(/[^\d.]/g, ''));
+
+    await productPage.selectAddonByName(PRODUCT_CLOUD_LINUX, TIMEOUT);
+
+    const addonRecurringPriceStr = await productPage.getAddonRecurringPriceByName(PRODUCT_CLOUD_LINUX, TIMEOUT);
+    const addonRecurringPrice = parseFloat(addonRecurringPriceStr.replace(/[^\d.]/g, ''));
+
+    await expect(productPage.totalPriceDueToday).not.toHaveText(priceDueTodayBeforeAddonStr, { timeout: TIMEOUT });
+
+    const priceDueTodayAfterAddonStr = await productPage.getTotalDueToday();
+    const priceDueTodayAfterAddon = parseFloat(priceDueTodayAfterAddonStr.replace(/[^\d.]/g, ''));
+
+    const addonDueToday = priceDueTodayAfterAddon - priceDueTodayBeforeAddon;
+    const expectedTotalRecurring = productRecurringPrice + addonRecurringPrice;
+    const expectedTotalDueToday = priceDueTodayAfterAddon;
+
+    await productPage.verifyOrderSummaryUpdated(expectedTotalRecurring, TIMEOUT);
+    await productPage.continue(TIMEOUT);
+
+    await cartPage.verifyMonthlyOrderSummar(expectedTotalRecurring, TIMEOUT);
+    await cartPage.verifyOrderSummary(expectedTotalDueToday, TIMEOUT);
+
+    await cartPage.verifyProductPresent(PRODUCT_CPANEL_PREMIER, TIMEOUT);
+    await cartPage.verifyAddonPresent(PRODUCT_CLOUD_LINUX, TIMEOUT);
+
+    await cartPage.proceedToCheckout(TIMEOUT);
+
+    await checkoutPage.verifyProductDetails({
+        name: PRODUCT_CPANEL_PREMIER,
+        ip: testIP,
+        recurringPrice: expectedTotalRecurring,
+        dueToday: priceDueTodayBeforeAddon,
+    }, TIMEOUT);
+
+    await checkoutPage.verifyProductDetails({
+        name: PRODUCT_CLOUD_LINUX,
+        ip: testIP,
+        recurringPrice: addonRecurringPrice,
+        dueToday: addonDueToday,
+    }, TIMEOUT);
+
+    await checkoutPage.verifyTotalDueToday(expectedTotalDueToday, TIMEOUT);
+    await checkoutPage.verifySections(TIMEOUT);
 });

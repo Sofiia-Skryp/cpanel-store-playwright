@@ -1,10 +1,44 @@
-# Default ignored files
-/shelf/
-/workspace.xml
-# Editor-based HTTP Client requests
-/httpRequests/
-# Environment-dependent path to Maven home directory
-/mavenHomeManager.xml
-# Datasource local storage ignored files
-/dataSources/
-/dataSources.local.xml
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+.pnpm-debug.log
+
+# Playwright reports & outputs
+test-results/
+playwright-report/
+blob-report/
+*.zip
+
+# VSCode
+.vscode/
+.history/
+
+# JetBrains IDE (WebStorm, IntelliJ, etc)
+.idea/
+*.iml
+
+# Mac OS
+.DS_Store
+
+# Env files
+.env
+.env.*
+
+# Test outputs
+coverage/
+output/
+
+# Misc
+shelf/
+workspace.xml
+httpRequests/
+mavenHomeManager.xml
+dataSources/
+dataSources.local.xml
+
+# System files
+Thumbs.db

@@ -1,33 +1,44 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 
 export class CheckoutPage {
-    readonly page: Page;
-    productTable: Locator;
-    licenseName: Locator;
-    ip: Locator;
-    price: Locator;
-    completeOrderBtn: Locator;
+    private readonly page: Page;
+    private readonly price: Locator;
+    private readonly completeOrderBtn: Locator;
 
     constructor(page: Page) {
         this.page = page;
-        this.productTable = this.page.locator('.checkout-summary');
-        this.licenseName = this.page.locator('.checkout-summary .product-name');
-        this.ip = this.page.locator('.checkout-summary .product-ip');
-        this.price = this.page.locator('.checkout-summary .product-price');
-        this.completeOrderBtn = this.page.locator('button', { hasText: 'Complete Order' });
+        this.price = this.page.locator('//div[@id="totalCartPrice"]');
+        this.completeOrderBtn = this.page.locator('//button[@id="btnCompleteOrder"]\n');
     }
 
-    section(sectionName: string) {
+    private section(sectionName: string): Locator {
         return this.page.locator('section', { hasText: sectionName });
     }
 
-    async verifyCheckoutInfo({ product, ip, price }: { product: string; ip: string; price: string }) {
-        await this.licenseName.filter({ hasText: product }).waitFor();
-        await this.ip.filter({ hasText: ip }).waitFor();
-        await this.price.filter({ hasText: price }).waitFor();
+    async verifyProductDetails({name, ip, recurringPrice, dueToday,}: { name: string; ip: string; recurringPrice: number; dueToday: number; }, timeout = 7000): Promise<void> {
+        const row = this.page.locator(
+            `//tr[td[contains(normalize-space(), "${name}")]]`
+        );
+
+        await expect(row.locator('xpath=.//td[1]')).toContainText(name, { timeout });
+
+        const ipText = await row.locator('xpath=.//td[3]').textContent();
+        expect(ipText?.trim()).toBe(ip);
+
+        const recurringPriceText = await row.locator('xpath=.//td[4]').textContent();
+        const recurringPriceNumber = parseFloat(
+            recurringPriceText?.replace(/[^\d.]/g, '') || '0'
+        );
+        expect(recurringPriceNumber).toBeCloseTo(recurringPrice, 2);
+
+        const dueTodayText = await row.locator('xpath=.//td[5]').textContent();
+        const dueTodayNumber = parseFloat(
+            dueTodayText?.replace(/[^\d.]/g, '') || '0'
+        );
+        expect(dueTodayNumber).toBeCloseTo(dueToday, 2);
     }
 
-    async verifySections() {
+    async verifySections(timeout = 5000) {
         for (const section of [
             'Personal Information',
             'Billing Address',
@@ -35,8 +46,15 @@ export class CheckoutPage {
             'Terms & Conditions',
             'Payment Details',
         ]) {
-            await this.section(section).waitFor();
+            await expect(this.section(section)).toBeVisible({ timeout });
         }
-        await this.completeOrderBtn.isDisabled();
+        await expect(this.completeOrderBtn).toBeDisabled({ timeout });
+    }
+
+    async verifyTotalDueToday(expectedDueToday: number, timeout = 10000) {
+        await expect(this.price).toBeVisible({ timeout });
+        const actualTotalStr = (await this.price.textContent())?.trim() || '';
+        const actualTotal = parseFloat(actualTotalStr.replace(/[^\d.]/g, ''));
+        expect(actualTotal).toBeCloseTo(expectedDueToday, 2);
     }
 }
