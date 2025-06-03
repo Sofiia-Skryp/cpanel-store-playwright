@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 
 export function getRandomIP() {
-    return faker.internet.ip();
+    return faker.internet.ipv4();
 }
+
