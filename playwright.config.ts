@@ -13,7 +13,7 @@ export default defineConfig({
     ],
     use: {
         baseURL: 'https://store.cpanel.net',
-        headless: false,
+        headless: true,
         trace: 'on',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
