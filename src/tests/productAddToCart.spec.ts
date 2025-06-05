@@ -1,29 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { HomePage } from '@/pages/HomePage';
-import { ProductPage } from '@/pages/ProductPage';
-import { CartPage } from '@/pages/CartPage';
-import { CheckoutPage } from '@/pages/CheckoutPage';
+import { test } from '@/fixtures/fixturePages';
 import { PRODUCT_CLOUD_LINUX } from '@/data/testData';
 import { PRODUCT_CPANEL_PREMIER } from '@/data/testData';
-import { getRandomIP } from '@/fixtures/dataFactory';
+import { getRandomIP } from '@/utils/dataFactory';
 
-let homePage: HomePage;
-let productPage: ProductPage;
-let cartPage: CartPage;
-let checkoutPage: CheckoutPage;
+test('Add product & addon to cart, verify checkout', async ({homePage, cartPage, checkoutPage, productPage}) => {
 
-test.beforeEach(async ({ page }) => {
-    homePage = new HomePage(page);
-    productPage = new ProductPage(page);
-    cartPage = new CartPage(page);
-    checkoutPage = new CheckoutPage(page);
-});
-
-
-
-test('Add product & addon to cart, verify checkout', async ({ page }) => {
-
-    const TIMEOUT = 20000;
     const testIP = getRandomIP();
 
     await homePage.goto();
@@ -32,17 +13,17 @@ test('Add product & addon to cart, verify checkout', async ({ page }) => {
     const productRecurringPrice = parseFloat(productRecurringPriceStr.replace(/[^\d.]/g, ''));
 
     await homePage.selectProductByName(PRODUCT_CPANEL_PREMIER);
-    await productPage.setIpAddress(testIP, TIMEOUT);
+    await productPage.setIpAddress(testIP);
 
-    const priceDueTodayBeforeAddonStr = await productPage.getTotalDueToday(TIMEOUT);
+    const priceDueTodayBeforeAddonStr = await productPage.getTotalDueToday();
     const priceDueTodayBeforeAddon = parseFloat(priceDueTodayBeforeAddonStr.replace(/[^\d.]/g, ''));
 
-    await productPage.selectAddonByName(PRODUCT_CLOUD_LINUX, TIMEOUT);
+    await productPage.selectAddonByName(PRODUCT_CLOUD_LINUX);
 
-    const addonRecurringPriceStr = await productPage.getAddonRecurringPriceByName(PRODUCT_CLOUD_LINUX, TIMEOUT);
+    const addonRecurringPriceStr = await productPage.getAddonRecurringPriceByName(PRODUCT_CLOUD_LINUX);
     const addonRecurringPrice = parseFloat(addonRecurringPriceStr.replace(/[^\d.]/g, ''));
 
-    await expect(productPage.totalPriceDueToday).not.toHaveText(priceDueTodayBeforeAddonStr, { timeout: TIMEOUT });
+    await productPage.verifyBalanceChanged(priceDueTodayBeforeAddonStr);
 
     const priceDueTodayAfterAddonStr = await productPage.getTotalDueToday();
     const priceDueTodayAfterAddon = parseFloat(priceDueTodayAfterAddonStr.replace(/[^\d.]/g, ''));
@@ -51,31 +32,31 @@ test('Add product & addon to cart, verify checkout', async ({ page }) => {
     const expectedTotalRecurring = productRecurringPrice + addonRecurringPrice;
     const expectedTotalDueToday = priceDueTodayAfterAddon;
 
-    await productPage.verifyOrderSummaryUpdated(expectedTotalRecurring, TIMEOUT);
-    await productPage.continue(TIMEOUT);
+    await productPage.verifyOrderSummaryUpdated(expectedTotalRecurring, );
+    await productPage.continue();
 
-    await cartPage.verifyMonthlyOrderSummar(expectedTotalRecurring, TIMEOUT);
-    await cartPage.verifyOrderSummary(expectedTotalDueToday, TIMEOUT);
+    await cartPage.verifyMonthlyOrderSummar(expectedTotalRecurring);
+    await cartPage.verifyOrderSummary(expectedTotalDueToday);
 
-    await cartPage.verifyProductPresent(PRODUCT_CPANEL_PREMIER, TIMEOUT);
-    await cartPage.verifyAddonPresent(PRODUCT_CLOUD_LINUX, TIMEOUT);
+    await cartPage.verifyProductPresent(PRODUCT_CPANEL_PREMIER);
+    await cartPage.verifyAddonPresent(PRODUCT_CLOUD_LINUX);
 
-    await cartPage.proceedToCheckout(TIMEOUT);
+    await cartPage.proceedToCheckout();
 
     await checkoutPage.verifyProductDetails({
         name: PRODUCT_CPANEL_PREMIER,
         ip: testIP,
         recurringPrice: expectedTotalRecurring,
         dueToday: priceDueTodayBeforeAddon,
-    }, TIMEOUT);
+    });
 
     await checkoutPage.verifyProductDetails({
         name: PRODUCT_CLOUD_LINUX,
         ip: testIP,
         recurringPrice: addonRecurringPrice,
         dueToday: addonDueToday,
-    }, TIMEOUT);
+    });
 
-    await checkoutPage.verifyTotalDueToday(expectedTotalDueToday, TIMEOUT);
-    await checkoutPage.verifySections(TIMEOUT);
+    await checkoutPage.verifyTotalDueToday(expectedTotalDueToday, );
+    await checkoutPage.verifySections();
 });

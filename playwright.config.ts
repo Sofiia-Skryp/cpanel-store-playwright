@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './src/tests',
-    timeout: 60_000,
+    timeout: 80000,
     expect: {
-        timeout: 5_000,
+        timeout: 20000,
     },
     retries: 1,
     reporter: [
@@ -13,10 +13,12 @@ export default defineConfig({
     ],
     use: {
         baseURL: 'https://store.cpanel.net',
-        headless: true,
+        headless: false,
         trace: 'on',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
+        actionTimeout: 30000,
+        navigationTimeout: 30000,
     },
     projects: [
         {

@@ -61,4 +61,8 @@ export class ProductPage {
         const amountText = await this.totalPriceDueToday.textContent();
         return amountText ? amountText.trim() : '';
     }
+    async verifyBalanceChanged (previousPrice: string, timeout: number = 20000){
+        await expect(this.totalPriceDueToday).not.toHaveText(previousPrice, { timeout });
+    }
+
 }

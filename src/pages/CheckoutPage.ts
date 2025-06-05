@@ -38,7 +38,7 @@ export class CheckoutPage {
         expect(dueTodayNumber).toBeCloseTo(dueToday, 2);
     }
 
-    async verifySections(timeout = 5000) {
+    async verifySections() {
         for (const section of [
             'Personal Information',
             'Billing Address',
@@ -46,13 +46,13 @@ export class CheckoutPage {
             'Terms & Conditions',
             'Payment Details',
         ]) {
-            await expect(this.section(section)).toBeVisible({ timeout });
+            await expect(this.section(section)).toBeVisible();
         }
-        await expect(this.completeOrderBtn).toBeDisabled({ timeout });
+        await expect(this.completeOrderBtn).toBeDisabled();
     }
 
-    async verifyTotalDueToday(expectedDueToday: number, timeout = 10000) {
-        await expect(this.price).toBeVisible({ timeout });
+    async verifyTotalDueToday(expectedDueToday: number) {
+        await expect(this.price).toBeVisible();
         const actualTotalStr = (await this.price.textContent())?.trim() || '';
         const actualTotal = parseFloat(actualTotalStr.replace(/[^\d.]/g, ''));
         expect(actualTotal).toBeCloseTo(expectedDueToday, 2);
